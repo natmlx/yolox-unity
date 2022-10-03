@@ -4,5 +4,8 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/YOLOXSample.unity
+    guid: 9230c940bd7f54a89963ed702e09c598
   m_configObjects: {}

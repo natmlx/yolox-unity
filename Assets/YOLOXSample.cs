@@ -6,6 +6,8 @@
 namespace NatML.Examples {
 
     using UnityEngine;
+    using NatML.Devices;
+    using NatML.Devices.Outputs;
     using NatML.Features;
     using NatML.Vision;
     using NatML.Visualizers;
@@ -13,33 +15,55 @@ namespace NatML.Examples {
 
     public sealed class YOLOXSample : MonoBehaviour {
 
-        [Header(@"Prediction")]
-        public Texture2D image;
-        public bool gpu;
-
         [Header(@"UI")]
         public YOLOXVisualizer visualizer;
 
+        private CameraDevice cameraDevice;
+        private TextureOutput cameraTextureOutput;
+
+        private MLModelData modelData;
+        private MLModel model;
+        private YOLOXPredictor predictor;
+
         async void Start () {
-            Debug.Log("Fetching model data from NatML...");
-            // Fetch the model data from NatML
-            var modelData = await MLModelData.FromHub("@natsuite/yolox");
-            modelData.computeTarget = gpu ? MLModelData.ComputeTarget.All : MLModelData.ComputeTarget.CPUOnly;
-            // Deserialize the model
-            using var model = modelData.Deserialize();
+            // Request camera permissions
+            var permissionStatus = await MediaDeviceQuery.RequestPermissions<CameraDevice>();
+            if (permissionStatus != PermissionStatus.Authorized) {
+                Debug.Log(@"User did not grant camera permissions");
+                return;
+            }
+            // Get a camera device
+            var query = new MediaDeviceQuery(MediaDeviceCriteria.CameraDevice);
+            cameraDevice = query.current as CameraDevice;
+            // Start the camera preview
+            cameraTextureOutput = new TextureOutput();
+            cameraDevice.StartRunning(cameraTextureOutput);
+            // Display the camera preview
+            var cameraTexture = await cameraTextureOutput;
+            visualizer.image = cameraTexture;
             // Create the YOLOX predictor
-            using var predictor = new YOLOXPredictor(model, modelData.labels);
-            // Create input feature
-            var inputFeature = new MLImageFeature(image);
-            (inputFeature.mean, inputFeature.std) = modelData.normalization;
-            inputFeature.aspectMode = modelData.aspectMode;
+            modelData = await MLModelData.FromHub("@natsuite/yolox");
+            model = modelData.Deserialize();
+            predictor = new YOLOXPredictor(model, modelData.labels);
+        }
+
+        void Update () {
+            // Check that predictor has been created
+            if (predictor == null)
+                return;
+            // Create image feature
+            var imageFeature = new MLImageFeature(cameraTextureOutput.texture);
+            (imageFeature.mean, imageFeature.std) = modelData.normalization;
+            imageFeature.aspectMode = modelData.aspectMode;
             // Detect
-            var watch = Stopwatch.StartNew();
-            var detections = predictor.Predict(inputFeature);
-            watch.Stop();
+            var detections = predictor.Predict(imageFeature);
             // Visualize
-            Debug.Log($"Detected {detections.Length} objects after {watch.Elapsed.TotalMilliseconds}ms");
-            visualizer.Render(image, detections);
+            visualizer.Render(detections);
+        }
+
+        void OnDisable () {
+            // Dispose the model
+            model?.Dispose();
         }
     }
 }
