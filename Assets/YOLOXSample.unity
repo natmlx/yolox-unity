@@ -754,7 +754,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   resolution: 3
-  capabilities: 0
+  capabilities: 2
   playOnAwake: 1
   focusMode: 0
   exposureMode: 0
