@@ -1,6 +1,6 @@
 /* 
 *   YOLOX
-*   Copyright (c) 2022 NatML Inc. All Rights Reserved.
+*   Copyright © 2023 NatML Inc. All Rights Reserved.
 */
 
 namespace NatML.Visualizers {
@@ -8,10 +8,11 @@ namespace NatML.Visualizers {
     using System.Collections.Generic;
     using UnityEngine;
     using UnityEngine.UI;
+    using NatML.VideoKit.UI;
 
     /// <summary>
     /// </summary>
-    [RequireComponent(typeof(RawImage), typeof(AspectRatioFitter))]
+    [RequireComponent(typeof(VideoKitCameraView))]
     public sealed class YOLOXVisualizer : MonoBehaviour {
 
         #region --Inspector--
@@ -20,17 +21,6 @@ namespace NatML.Visualizers {
 
 
         #region --Client API--
-        /// <summary>
-        /// Get or set the detection image.
-        /// </summary>
-        public Texture2D image {
-            get => rawImage.texture as Texture2D;
-            set {
-                rawImage.texture = value;
-                aspectFitter.aspectRatio = (float)value.width / value.height;
-            }
-        }
-
         /// <summary>
         /// Render a set of object detections.
         /// </summary>
@@ -42,7 +32,7 @@ namespace NatML.Visualizers {
                 GameObject.Destroy(rect.gameObject);
             currentRects.Clear();
             // Render rects
-            var imageRect = new Rect(0, 0, image.width, image.height);
+            var imageRect = new Rect(0, 0, rawImage.texture.width, rawImage.texture.height);
             foreach (var detection in detections) {
                 var rect = Instantiate(detectionPrefab, transform);
                 rect.gameObject.SetActive(true);
@@ -55,13 +45,9 @@ namespace NatML.Visualizers {
 
         #region --Operations--
         private RawImage rawImage;
-        private AspectRatioFitter aspectFitter;
         private readonly List<YOLOXDetection> currentRects = new List<YOLOXDetection>();
 
-        private void Awake () {
-            rawImage = GetComponent<RawImage>();
-            aspectFitter = GetComponent<AspectRatioFitter>();
-        }
+        private void Awake () => rawImage = GetComponent<RawImage>();
         #endregion
     }
 }
