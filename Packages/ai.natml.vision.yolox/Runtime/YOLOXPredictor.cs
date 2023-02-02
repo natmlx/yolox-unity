@@ -1,6 +1,6 @@
 /* 
 *   YOLOX
-*   Copyright (c) 2022 NatML Inc. All Rights Reserved.
+*   Copyright © 2023 NatML Inc. All Rights Reserved.
 */
 
 namespace NatML.Vision {
@@ -22,23 +22,15 @@ namespace NatML.Vision {
 
         #region --Client API--
         /// <summary>
-        /// Class labels.
-        /// </summary>
-        public readonly string[] labels;
-
-        /// <summary>
         /// Create the YOLOX predictor.
         /// </summary>
         /// <param name="model">YOLOX ML model.</param>
-        /// <param name="labels">Classification labels.</param>
         /// <param name="minScore">Minimum candidate score.</param>
         /// <param name="maxIoU">Maximum intersection-over-union score for overlap removal.</param>
-        public YOLOXPredictor (MLModel model, string[] labels, float minScore = 0.4f, float maxIoU = 0.5f) {
-            this.model = model as MLEdgeModel;
-            this.labels = labels;
+        public YOLOXPredictor (MLEdgeModel model, float minScore = 0.4f, float maxIoU = 0.5f) {
+            this.model = model;
             this.minScore = minScore;
             this.maxIoU = maxIoU;
-            this.inputType = model.inputs[0] as MLImageType;
         }
 
         /// <summary>
@@ -53,10 +45,14 @@ namespace NatML.Vision {
             // Check type
             var input = inputs[0];
             var imageType = MLImageType.FromType(input.type);
-            var imageFeature = input as MLImageFeature;
             if (!imageType)
                 throw new ArgumentException(@"YOLOX predictor expects an an array or image feature", nameof(inputs));
+            // Pre-process
+            var imageFeature = input as MLImageFeature;
+            (imageFeature.mean, imageFeature.std) = model.normalization;
+            imageFeature.aspectMode = model.aspectMode;
             // Predict
+            var inputType = model.inputs[0] as MLImageType;
             using var inputFeature = (input as IMLEdgeFeature).Create(inputType);
             using var outputFeatures = model.Predict(inputFeature);
             // Marshal
@@ -92,7 +88,7 @@ namespace NatML.Vision {
                         // Add
                         candidateBoxes.Add(box);
                         candidateScores.Add(score);
-                        candidateLabels.Add(labels[label]);
+                        candidateLabels.Add(model.labels[label]);
                     }
             var keepIdx = MLImageFeature.NonMaxSuppression(candidateBoxes, candidateScores, maxIoU);
             var result = new List<(Rect, string, float)>();
@@ -108,7 +104,6 @@ namespace NatML.Vision {
         private readonly MLEdgeModel model;
         private readonly float minScore;
         private readonly float maxIoU;
-        private readonly MLImageType inputType;
 
         void IDisposable.Dispose () { } // Not used
         #endregion
