@@ -1,6 +1,6 @@
 {
     "name": "ai.natml.vision.yolox",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "displayName": "YOLOX",
     "description": "High performance object detector based on YOLO series for Unity Engine.",
     "unity": "2021.2",
