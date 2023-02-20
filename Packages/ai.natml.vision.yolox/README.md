@@ -13,7 +13,7 @@ Add the following items to your Unity project's `Packages/manifest.json`:
     }
   ],
   "dependencies": {
-    "ai.natml.vision.yolox": "1.0.2"
+    "ai.natml.vision.yolox": "1.0.3"
   }
 }
 ```
@@ -21,10 +21,8 @@ Add the following items to your Unity project's `Packages/manifest.json`:
 ## Detecting Objects in an Image
 First, create the YOLOX predictor:
 ```csharp
-// Create the YOLOX model
-var model = await MLEdgeModel.Create("@natsuite/yolox");
 // Create the YOLOX predictor
-var predictor = new YOLOXPredictor(model);
+var predictor = await YOLOXPredictor.Create();
 ```
 
 Then detect objects in the image:
@@ -32,7 +30,7 @@ Then detect objects in the image:
 // Given an image
 Texture2D image = ...;
 // Detect objects
-(Rect rect, string label, float score)[] detections = predictor.Predict(image);
+YOLOXPredictor.Detection[] detections = predictor.Predict(image);
 ```
 
 > The detection rects are provided in normalized coordinates in range `[0.0, 1.0]`. The score is also normalized in range `[0.0, 1.0]`.

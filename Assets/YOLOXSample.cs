@@ -18,15 +18,11 @@ namespace NatML.Examples {
         [Header(@"UI")]
         public YOLOXVisualizer visualizer;
 
-        private MLModelData modelData;
-        private MLEdgeModel model;
         private YOLOXPredictor predictor;
         
         async void Start () {
-            // Create the YOLOX model
-            model = await MLEdgeModel.Create("@natsuite/yolox");
             // Create the YOLOX predictor
-            predictor = new YOLOXPredictor(model);
+            predictor = await YOLOXPredictor.Create();
             // Listen for camera frames
             cameraManager.OnCameraFrame.AddListener(OnCameraFrame);
         }
@@ -41,8 +37,8 @@ namespace NatML.Examples {
         void OnDisable () {
             // Stop listening for camera frames
             cameraManager.OnCameraFrame.RemoveListener(OnCameraFrame);
-            // Dispose the model
-            model?.Dispose();
+            // Dispose the predictor
+            predictor?.Dispose();
         }
     }
 }

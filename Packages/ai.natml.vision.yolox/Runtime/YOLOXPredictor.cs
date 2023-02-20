@@ -8,6 +8,7 @@ namespace NatML.Vision {
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading.Tasks;
     using UnityEngine;
     using NatML.Features;
     using NatML.Internal;
@@ -15,45 +16,59 @@ namespace NatML.Vision {
 
     /// <summary>
     /// YOLOX predictor for general object detection.
-    /// This predictor accepts an image feature and produces a list of detections.
-    /// Each detection is comprised of a normalized rect, label, and detection score.
+    /// This predictor accepts an image feature and produces an array of detections.
     /// </summary>
-    public sealed class YOLOXPredictor : IMLPredictor<(Rect rect, string label, float score)[]> {
+    public sealed class YOLOXPredictor : IMLPredictor<YOLOXPredictor.Detection[]> {
+
+        #region --Types--
+        /// <summary>
+        /// Detection.
+        /// </summary>
+        public readonly struct Detection {
+
+            /// <summary>
+            /// Normalized detection rect.
+            /// </summary>
+            public readonly Rect rect;
+
+            /// <summary>
+            /// Detection label.
+            /// </summary>
+            public readonly string label;
+
+            /// <summary>
+            /// Normalized detection score.
+            /// </summary>
+            public readonly float score;
+
+            public Detection (Rect rect, string label, float score) {
+                this.rect = rect;
+                this.label = label;
+                this.score = score;
+            }
+        }
+        #endregion
+
 
         #region --Client API--
-        /// <summary>
-        /// Create the YOLOX predictor.
-        /// </summary>
-        /// <param name="model">YOLOX ML model.</param>
-        /// <param name="minScore">Minimum candidate score.</param>
-        /// <param name="maxIoU">Maximum intersection-over-union score for overlap removal.</param>
-        public YOLOXPredictor (MLEdgeModel model, float minScore = 0.4f, float maxIoU = 0.5f) {
-            this.model = model;
-            this.minScore = minScore;
-            this.maxIoU = maxIoU;
-        }
-
         /// <summary>
         /// Detect objects in an image.
         /// </summary>
         /// <param name="inputs">Input image.</param>
         /// <returns>Detected objects.</returns>
-        public unsafe (Rect rect, string label, float score)[] Predict (params MLFeature[] inputs) {
+        public unsafe Detection[] Predict (params MLFeature[] inputs) {
             // Check
             if (inputs.Length != 1)
                 throw new ArgumentException(@"YOLOX predictor expects a single feature", nameof(inputs));
             // Check type
-            var input = inputs[0];
-            var imageType = MLImageType.FromType(input.type);
-            if (!imageType)
-                throw new ArgumentException(@"YOLOX predictor expects an an array or image feature", nameof(inputs));
+            if (!(inputs[0] is MLImageFeature imageFeature))
+                throw new ArgumentException(@"YOLOX predictor expects an image feature", nameof(inputs));
             // Pre-process
-            var imageFeature = input as MLImageFeature;
             (imageFeature.mean, imageFeature.std) = model.normalization;
             imageFeature.aspectMode = model.aspectMode;
             // Predict
             var inputType = model.inputs[0] as MLImageType;
-            using var inputFeature = (input as IMLEdgeFeature).Create(inputType);
+            using var inputFeature = (imageFeature as IMLEdgeFeature).Create(inputType);
             using var outputFeatures = model.Predict(inputFeature);
             // Marshal
             var logitsData = (float*)outputFeatures[0].data;      // (1,6300,85)
@@ -91,11 +106,34 @@ namespace NatML.Vision {
                         candidateLabels.Add(model.labels[label]);
                     }
             var keepIdx = MLImageFeature.NonMaxSuppression(candidateBoxes, candidateScores, maxIoU);
-            var result = new List<(Rect, string, float)>();
-            foreach (var idx in keepIdx)
-                result.Add((candidateBoxes[idx], candidateLabels[idx], candidateScores[idx]));
+            var result = new List<Detection>();
+            foreach (var idx in keepIdx) {
+                var detection = new Detection(candidateBoxes[idx], candidateLabels[idx], candidateScores[idx]);
+                result.Add(detection);
+            }
             // Return
             return result.ToArray();
+        }
+
+        /// <summary>
+        /// Dispose the predictor and release resources.
+        /// </summary>
+        public void Dispose () => model.Dispose();
+
+        /// <summary>
+        /// Create the YOLOX predictor.
+        /// </summary>
+        /// <param name="minScore">Minimum candidate score.</param>
+        /// <param name="maxIoU">Maximum intersection-over-union score for overlap removal.</param>
+        public static async Task<YOLOXPredictor> Create (
+            float minScore = 0.4f,
+            float maxIoU = 0.5f,
+            MLEdgeModel.Configuration configuration = null,
+            string accessKey = null
+        ) {
+            var model = await MLEdgeModel.Create("@natsuite/yolox", configuration, accessKey);
+            var predictor = new YOLOXPredictor(model, minScore, maxIoU);
+            return predictor;
         }
         #endregion
 
@@ -105,7 +143,11 @@ namespace NatML.Vision {
         private readonly float minScore;
         private readonly float maxIoU;
 
-        void IDisposable.Dispose () { } // Not used
+        private YOLOXPredictor (MLEdgeModel model, float minScore, float maxIoU) {
+            this.model = model;
+            this.minScore = minScore;
+            this.maxIoU = maxIoU;
+        }
         #endregion
     }
 }

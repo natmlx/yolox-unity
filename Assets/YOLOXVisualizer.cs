@@ -9,6 +9,7 @@ namespace NatML.Visualizers {
     using UnityEngine;
     using UnityEngine.UI;
     using NatML.VideoKit.UI;
+    using Vision;
 
     /// <summary>
     /// </summary>
@@ -26,7 +27,7 @@ namespace NatML.Visualizers {
         /// </summary>
         /// <param name="image">Image which detections are made on.</param>
         /// <param name="detections">Detections to render.</param>
-        public void Render (params (Rect rect, string label, float score)[] detections) {
+        public void Render (params YOLOXPredictor.Detection[] detections) {
             // Delete current
             foreach (var rect in currentRects)
                 GameObject.Destroy(rect.gameObject);
