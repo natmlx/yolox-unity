@@ -1,3 +1,6 @@
+## 1.0.4
++ Upgraded to NatML 1.1.15.
+
 ## 1.0.3
 + Added `YOLOXPredictor.Create` static method for fetching the model and creating the predictor.
 + Added `YOLOXPredictor.Detection` struct as the return type of the predictor.

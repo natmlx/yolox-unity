@@ -6,9 +6,9 @@
 namespace NatML.Examples {
 
     using UnityEngine;
-    using NatML.VideoKit;
     using NatML.Vision;
     using NatML.Visualizers;
+    using VideoKit;
 
     public sealed class YOLOXSample : MonoBehaviour {
 

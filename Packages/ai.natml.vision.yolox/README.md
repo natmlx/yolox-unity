@@ -9,11 +9,11 @@ Add the following items to your Unity project's `Packages/manifest.json`:
     {
       "name": "NatML",
       "url": "https://registry.npmjs.com",
-      "scopes": ["ai.natml"]
+      "scopes": ["ai.natml", "ai.fxn"]
     }
   ],
   "dependencies": {
-    "ai.natml.vision.yolox": "1.0.3"
+    "ai.natml.vision.yolox": "1.0.4"
   }
 }
 ```
